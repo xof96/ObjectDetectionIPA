@@ -278,3 +278,55 @@ def get_boundary(cc_points):
     cols_p = cols_p + min_x - 1
     contour = list(zip(rows_p, cols_p))
     return contour
+
+
+def is_circle(contour_points, error_th=3):
+    x_coords = [x[1] for x in contour_points]
+    y_coords = [y[0] for y in contour_points]
+    n_points = len(x_coords)
+    i1 = 0
+    i2 = np.round(3 * n_points / 10).astype(np.int32)
+    i3 = np.round(6 * n_points / 10).astype(np.int32)
+    x1 = x_coords[i1]
+    x2 = x_coords[i2]
+    x3 = x_coords[i3]
+    y1 = y_coords[i1]
+    y2 = y_coords[i2]
+    y3 = y_coords[i3]
+
+    a = np.array([[x1, y1, 1], [x2, y2, 1], [x3, y3, 1]])
+    b = np.array([-(x1 ** 2 + y1 ** 2), -(x2 ** 2 + y2 ** 2), -(x3 ** 2 + y3 ** 2)])
+    d, e, f = np.linalg.solve(a, b)
+
+    center = (np.round(-d / 2), np.round(-e / 2))
+    r = np.sqrt((d ** 2 + e ** 2) / 4 - f)
+    error = np.zeros(n_points)
+    for i in range(n_points):
+        curr_x = x_coords[i]
+        curr_y = y_coords[i]
+        estimated_r = np.sqrt((center[0] - curr_x) ** 2 + (center[1] - curr_y) ** 2)
+        error[i] = np.abs(estimated_r - r)
+
+    mean_error = np.mean(error)
+    if mean_error < error_th:
+        return True
+    else:
+        return False
+
+
+def filtering_circles(cc_list, error_th=3):
+    circles = []
+    for cc in cc_list:
+        if is_circle(contour_points=cc['boundary'], error_th=error_th):
+            circles.append(cc)
+    return circles
+
+
+def cc_to_str(c_component):
+    cc_id = c_component['id']
+    points = c_component['points']
+    size = c_component['size']
+    bbox = c_component['bbox']
+    boundary = c_component['boundary']
+    return '{\n\tid: ' + str(cc_id) + '\n\tpoints: ' + str(points) + '\n\tsize: ' + str(
+        size) + '\n\tbounding_box: ' + str(bbox) + '\n\tboundary: ' + str(boundary) + '\n}\n\n'
